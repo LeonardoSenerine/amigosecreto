@@ -60,6 +60,21 @@ const FAMILY_PHOTOS = [
   { src: '/images/familia-retrato.jpeg', alt: 'Um retrato carinhoso de familiares', caption: 'Rindo de uma coisa que só a gente entende.', aspectRatio: 1080 / 1441 },
   { src: '/images/familia-encontro-2.jpeg', alt: 'A família reunida em frente de casa', caption: 'A família inteira, do nosso jeito.', aspectRatio: 4 / 3 },
   { src: '/images/familia-abraco.jpeg', alt: 'Duas familiares reunidas em um abraço', caption: 'Saudade boa de um dia feliz.', aspectRatio: 1 },
+  { src: '/images/familia-hero.jpeg', alt: 'A família reunida na rede', caption: 'Todo mundo junto, até na rede.', aspectRatio: 1080 / 796 },
+  { src: '/images/familia-hoje-01.jpeg', alt: 'Uma foto antiga de familiares reunidos', caption: 'Uma lembrança antiga que segue por perto.', aspectRatio: 1 },
+  { src: '/images/familia-hoje-02.jpeg', alt: 'Uma criança da família em uma foto antiga', caption: 'Pequenos momentos que cresceram com a gente.', aspectRatio: 488 / 573 },
+  { src: '/images/familia-hoje-03.jpeg', alt: 'Familiares juntos em um retrato', caption: 'Um retrato do nosso jeito.', aspectRatio: 800 / 527 },
+  { src: '/images/familia-hoje-04.jpeg', alt: 'Crianças da família em uma foto antiga', caption: 'A bagunça boa de outros tempos.', aspectRatio: 480 / 288 },
+  { src: '/images/familia-hoje-05.jpeg', alt: 'Familiares reunidos em uma fotografia', caption: 'Gente querida, sempre por perto.', aspectRatio: 4 / 3 },
+  { src: '/images/familia-hoje-06.jpeg', alt: 'Mulheres da família reunidas para uma foto', caption: 'Um encontro para guardar.', aspectRatio: 4 / 3 },
+  { src: '/images/familia-hoje-07.jpeg', alt: 'Familiares juntos em uma foto espontânea', caption: 'Mais uma história para contar.', aspectRatio: 1080 / 617 },
+  { src: '/images/familia-hoje-08.jpeg', alt: 'Familiares em um momento de carinho', caption: 'Carinho que vira lembrança.', aspectRatio: 3 / 4 },
+  { src: '/images/familia-hoje-09.jpeg', alt: 'Um abraço entre familiares', caption: 'Abraço apertado, coração cheio.', aspectRatio: 3 / 4 },
+  { src: '/images/familia-hoje-10.jpeg', alt: 'Familiares reunidos em uma foto', caption: 'A família toda cabe numa foto.', aspectRatio: 714 / 680 },
+  { src: '/images/familia-hoje-11.jpeg', alt: 'Uma foto quadrada de familiares', caption: 'Um dia simples, uma memória boa.', aspectRatio: 1 },
+  { src: '/images/familia-hoje-12.jpeg', alt: 'Familiares reunidos para uma foto vertical', caption: 'Juntos, como sempre.', aspectRatio: 738 / 1600 },
+  { src: '/images/familia-hoje-13.jpeg', alt: 'Familiares sorrindo para a câmera', caption: 'Sorrisos que a gente reconhece.', aspectRatio: 960 / 576 },
+  { src: '/images/familia-hoje-14.jpeg', alt: 'Um registro espontâneo da família', caption: 'Mais um pedacinho da nossa história.', aspectRatio: 397 / 291 },
 ];
 
 type AppData = {
