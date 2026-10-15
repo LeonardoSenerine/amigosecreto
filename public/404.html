@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#183c32" />
+    <meta name="robots" content="noindex" />
+    <title>Página não encontrada | Amigo secreto</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet" />
+    <style>
+      :root { color-scheme: light; font-family: 'DM Sans', sans-serif; color: #203b33; background: #fbfcf7; }
+      * { box-sizing: border-box; }
+      body { min-width: 320px; min-height: 100vh; margin: 0; }
+      main { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(420px, .86fr); background: #fbfcf7; }
+      .photo { min-height: 100vh; overflow: hidden; background: #183c32; animation: photo-in 900ms ease both; }
+      .photo img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: center 38%; }
+      .content { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: clamp(35px, 7vw, 100px); animation: text-in 650ms 120ms ease both; }
+      .brand { display: flex; align-items: center; gap: 10px; margin-bottom: 74px; color: #203b33; font-family: 'Fraunces', Georgia, serif; font-size: 23px; font-weight: 700; text-decoration: none; }
+      .brand-mark { display: grid; width: 34px; height: 34px; place-items: center; border-radius: 50%; background: #183c32; color: #fbfcf7; font-family: 'DM Sans', sans-serif; font-size: 18px; }
+      .code { color: #ed765e; font-size: 10px; font-weight: 700; letter-spacing: .12em; }
+      h1 { max-width: 500px; margin: 12px 0 10px; font-family: 'Fraunces', Georgia, serif; font-size: clamp(40px, 5vw, 64px); line-height: 1.04; font-weight: 600; }
+      p { max-width: 390px; margin: 0; color: #77847b; font-size: 14px; line-height: 1.7; }
+      .home { display: inline-flex; min-height: 46px; align-items: center; gap: 10px; margin-top: 28px; padding: 0 17px; background: #183c32; color: #fff; font-size: 12px; font-weight: 700; text-decoration: none; transition: background 160ms ease, transform 160ms ease; }
+      .home:hover { transform: translateY(-2px); background: #285948; }
+      @keyframes photo-in { from { opacity: .7; transform: scale(1.025); } to { opacity: 1; transform: scale(1); } }
+      @keyframes text-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      @media (max-width: 760px) {
+        main { grid-template-columns: 1fr; grid-template-rows: 34vh 1fr; }
+        .photo { min-height: 0; }
+        .content { padding: 28px 24px 48px; }
+        .brand { margin-bottom: 40px; }
+        h1 { max-width: 390px; font-size: 42px; }
+      }
+      @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
+    </style>
+  </head>
+  <body>
+    <main>
+        <div class="photo"><img src="/images/familia-hero.jpeg" alt="A família reunida na rede" /></div>
+      <section class="content">
+        <a class="brand" href="/" aria-label="Voltar para Amigo secreto"><span class="brand-mark" aria-hidden="true">&#9830;</span><span>Amigo secreto</span></a>
+        <span class="code">404 · PÁGINA NÃO ENCONTRADA</span>
+        <h1>Esse caminho ficou fora do sorteio.</h1>
+        <p>Não encontramos este endereço. Vamos voltar para a nossa família?</p>
+        <a class="home" href="/">&#8592; Voltar para o início</a>
+      </section>
+    </main>
+  </body>
+</html>

@@ -175,7 +175,27 @@ function compressImage(file: File): Promise<string> {
   });
 }
 
-function App() {
+function NotFoundPage() {
+  return (
+    <main className="not-found-page">
+      <div className="not-found-photo">
+        <img src="/images/familia-hero.jpeg" alt="A família reunida na rede" />
+      </div>
+      <section className="not-found-content">
+        <a className="brand not-found-brand" href="/" aria-label="Voltar para Amigo secreto">
+          <span className="brand-mark"><Gift size={19} /></span>
+          <span>Amigo secreto</span>
+        </a>
+        <span className="not-found-code">404 · PÁGINA NÃO ENCONTRADA</span>
+        <h1>Esse caminho ficou fora do sorteio.</h1>
+        <p>Não encontramos este endereço. Vamos voltar para a nossa família?</p>
+        <a className="not-found-link" href="/"><ArrowLeft size={17} /> Voltar para o início</a>
+      </section>
+    </main>
+  );
+}
+
+function FamilyApp() {
   const [data, setData] = useState<AppData>(readData);
   const [currentName, setCurrentName] = useState<string | null>(null);
   const [authName, setAuthName] = useState<string | null>(null);
@@ -497,7 +517,7 @@ function App() {
                   ))}
                   {visibleParticipants.length === 0 && <p className="empty-search">Nenhum nome encontrado.</p>}
                 </div>
-                <p className="privacy-note"><LockKeyhole size={14} /> {hasSupabaseConfig ? 'Seus dados ficam no espaço da família.' : 'Seus desejos e sua foto ficam salvos neste navegador.'}</p>
+                <p className="privacy-note"><LockKeyhole size={14} /> Seus dados ficam protegidos no espaço da família.</p>
                 {connectionError && <p className="connection-error" role="status">{connectionError}</p>}
               </div>
               <aside className="family-aside">
@@ -599,7 +619,7 @@ function App() {
             </div>
             <div className="gallery-thumbnails" aria-label="Escolher foto">
               {FAMILY_PHOTOS.map((photo, index) => (
-                <button className={index === activePhoto ? 'thumbnail-active' : ''} key={photo.src} onClick={() => setActivePhoto(index)} aria-label={`Mostrar foto ${index + 1}`} aria-pressed={index === activePhoto}>
+                <button className={index === activePhoto ? 'thumbnail-active' : ''} key={photo.src} style={{ animationDelay: `${Math.min(index * 24, 360)}ms` }} onClick={() => setActivePhoto(index)} aria-label={`Mostrar foto ${index + 1}`} aria-pressed={index === activePhoto}>
                   <img src={photo.src} alt="" />
                 </button>
               ))}
@@ -631,9 +651,7 @@ function App() {
               </button>
             </form>
             {!hasPassword && <p className="auth-note">O primeiro acesso cria a senha deste nome. Combine o cadastro com a pessoa antes de continuar.</p>}
-            {hasSupabaseConfig
-              ? <p className="auth-note">Sua senha fica protegida pelo Supabase. Como o cadastro não usa e-mail real, peça ao organizador para redefinir uma senha esquecida.</p>
-              : <p className="auth-note">Nesta versão, a senha e os dados ficam neste navegador. Para usar em vários celulares, será preciso conectar o Supabase.</p>}
+            <p className="auth-note">Sua senha fica protegida pelo Supabase. Como o cadastro não usa e-mail real, peça ao organizador para redefinir uma senha esquecida.</p>
           </section>
         </div>
       )}
@@ -666,6 +684,12 @@ function App() {
       )}
     </div>
   );
+}
+
+function App() {
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  if (path !== '/' && path !== '/index.html') return <NotFoundPage />;
+  return <FamilyApp />;
 }
 
 export default App;
