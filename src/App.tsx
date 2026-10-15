@@ -14,10 +14,24 @@ import {
   Users,
   X,
 } from 'lucide-react';
+import {
+  addWish as addRemoteWish,
+  authenticateParticipant as authenticateWithSupabase,
+  drawOnce,
+  getCurrentParticipant,
+  getParticipants,
+  loadParticipantState,
+  removeWish as removeRemoteWish,
+  signOut,
+  uploadAvatar,
+  type Participant,
+  type ParticipantProfile,
+} from './lib/familyApi';
+import { hasSupabaseConfig, supabase } from './lib/supabase';
 
 const PARTICIPANTS = [
   'Nicolly',
-  'Leonardo',
+  'Leonardo Senerine',
   'Leo Denardi',
   'Vanda',
   'Alex',
@@ -154,14 +168,39 @@ function App() {
   const [authConfirm, setAuthConfirm] = useState('');
   const [authError, setAuthError] = useState('');
   const [authSubmitting, setAuthSubmitting] = useState(false);
+  const [drawSubmitting, setDrawSubmitting] = useState(false);
   const [wishInput, setWishInput] = useState('');
   const [filter, setFilter] = useState('');
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [remoteReady, setRemoteReady] = useState(!hasSupabaseConfig);
+  const [currentParticipantId, setCurrentParticipantId] = useState<number | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [remoteWishIds, setRemoteWishIds] = useState<Record<string, string[]>>({});
+  const [connectionError, setConnectionError] = useState('');
   const [isRevealed, setIsRevealed] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const [showWishlist, setShowWishlist] = useState(false);
   const [photoError, setPhotoError] = useState('');
   const [activePhoto, setActivePhoto] = useState(0);
   const photoInput = useRef<HTMLInputElement>(null);
+
+  async function loadSharedState(profile: ParticipantProfile, directory: Participant[]) {
+    const sharedState = await loadParticipantState(profile, directory);
+    const wishlists: Record<string, string[]> = { [profile.name]: sharedState.wishes.map((wish) => wish.item) };
+    if (sharedState.recipientName) {
+      wishlists[sharedState.recipientName] = sharedState.recipientWishes.map((wish) => wish.item);
+    }
+    setData({
+      wishlists,
+      photos: sharedState.photos,
+      assignments: sharedState.recipientName ? { [profile.name]: sharedState.recipientName } : null,
+      passwords: {},
+    });
+    setRemoteWishIds({ [profile.name]: sharedState.wishes.map((wish) => wish.id) });
+    setCurrentParticipantId(profile.id);
+    setCurrentUserId(profile.userId);
+    setCurrentName(profile.name);
+  }
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -172,16 +211,57 @@ function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    if (!hasSupabaseConfig) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   }, [data]);
+
+  useEffect(() => {
+    if (!hasSupabaseConfig || !supabase) return;
+    let active = true;
+    const client = supabase;
+
+    async function initializeSharedApp() {
+      try {
+        const directory = await getParticipants();
+        if (!active) return;
+        setParticipants(directory);
+        setRemoteReady(true);
+        const profile = await getCurrentParticipant();
+        if (active && profile) await loadSharedState(profile, directory);
+      } catch (error) {
+        if (!active) return;
+        setConnectionError(error instanceof Error ? error.message : 'Não foi possível conectar ao Supabase.');
+      }
+    }
+
+    void initializeSharedApp();
+    const { data: authState } = client.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        setCurrentName(null);
+        setCurrentParticipantId(null);
+        setCurrentUserId(null);
+      }
+    });
+
+    return () => {
+      active = false;
+      authState.subscription.unsubscribe();
+    };
+  }, []);
 
   const recipient = currentName && data.assignments ? data.assignments[currentName] : null;
   const wishes = currentName ? data.wishlists[currentName] ?? [] : [];
   const recipientWishes = recipient ? data.wishlists[recipient] ?? [] : [];
-  const hasPassword = authName ? Boolean(data.passwords[authName]) : false;
-  const visibleParticipants = PARTICIPANTS.filter((name) => name.toLocaleLowerCase('pt-BR').includes(filter.toLocaleLowerCase('pt-BR')));
+  const selectedParticipant = authName ? participants.find((participant) => participant.name === authName) : null;
+  const hasPassword = authName
+    ? hasSupabaseConfig
+      ? Boolean(selectedParticipant?.is_claimed)
+      : Boolean(data.passwords[authName])
+    : false;
+  const participantNames = hasSupabaseConfig && remoteReady ? participants.map((participant) => participant.name) : PARTICIPANTS;
+  const visibleParticipants = participantNames.filter((name) => name.toLocaleLowerCase('pt-BR').includes(filter.toLocaleLowerCase('pt-BR')));
 
   function chooseParticipant(name: string) {
+    if (hasSupabaseConfig && !remoteReady) return;
     setAuthName(name);
     setAuthPassword('');
     setAuthConfirm('');
@@ -194,6 +274,19 @@ function App() {
     setAuthError('');
     setAuthSubmitting(true);
     try {
+      if (hasSupabaseConfig) {
+        const participant = participants.find((item) => item.name === authName);
+        if (!participant) throw new Error('Não foi possível encontrar esse nome no grupo.');
+        const profile = await authenticateWithSupabase(participant, authPassword, authConfirm);
+        await loadSharedState(profile, participants);
+        setParticipants((previous) => previous.map((item) => item.id === participant.id ? { ...item, is_claimed: true } : item));
+        setAuthName(null);
+        setAuthPassword('');
+        setAuthConfirm('');
+        setConnectionError('');
+        return;
+      }
+
       const credential = data.passwords[authName];
       if (credential) {
         if (!(await verifyPassword(authPassword, credential))) {
@@ -219,17 +312,29 @@ function App() {
       setAuthName(null);
       setAuthPassword('');
       setAuthConfirm('');
-    } catch {
-      setAuthError('Não foi possível verificar a senha neste navegador.');
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : 'Não foi possível verificar a senha. Confira os dados e tente novamente.');
     } finally {
       setAuthSubmitting(false);
     }
   }
 
-  function addWish(event: FormEvent<HTMLFormElement>) {
+  async function addWish(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const wish = wishInput.trim();
     if (!currentName || !wish) return;
+    if (hasSupabaseConfig && currentParticipantId !== null) {
+      try {
+        const savedWish = await addRemoteWish(currentParticipantId, wish);
+        setData((previous) => ({ ...previous, wishlists: { ...previous.wishlists, [currentName]: [...(previous.wishlists[currentName] ?? []), savedWish.item] } }));
+        setRemoteWishIds((previous) => ({ ...previous, [currentName]: [...(previous[currentName] ?? []), savedWish.id] }));
+        setWishInput('');
+        setConnectionError('');
+      } catch (error) {
+        setConnectionError(error instanceof Error ? error.message : 'Não foi possível salvar o desejo.');
+      }
+      return;
+    }
     setData((previous) => ({
       ...previous,
       wishlists: {
@@ -240,8 +345,21 @@ function App() {
     setWishInput('');
   }
 
-  function removeWish(indexToRemove: number) {
+  async function removeWish(indexToRemove: number) {
     if (!currentName) return;
+    if (hasSupabaseConfig) {
+      const wishId = remoteWishIds[currentName]?.[indexToRemove];
+      if (!wishId) return;
+      try {
+        await removeRemoteWish(wishId);
+        setRemoteWishIds((previous) => ({ ...previous, [currentName]: previous[currentName].filter((_, index) => index !== indexToRemove) }));
+        setData((previous) => ({ ...previous, wishlists: { ...previous.wishlists, [currentName]: (previous.wishlists[currentName] ?? []).filter((_, index) => index !== indexToRemove) } }));
+        setConnectionError('');
+      } catch (error) {
+        setConnectionError(error instanceof Error ? error.message : 'Não foi possível remover o desejo.');
+      }
+      return;
+    }
     setData((previous) => ({
       ...previous,
       wishlists: {
@@ -256,12 +374,25 @@ function App() {
     setShowWarning(true);
   }
 
-  function confirmReveal() {
-    if (!data.assignments) {
-      setData((previous) => ({ ...previous, assignments: createAssignments() }));
+  async function confirmReveal() {
+    setDrawSubmitting(true);
+    setConnectionError('');
+    try {
+      if (hasSupabaseConfig) {
+        const participant = participants.find((item) => item.id === currentParticipantId);
+        if (!participant || currentParticipantId === null || !currentUserId) throw new Error('Entre novamente para continuar.');
+        await drawOnce();
+        await loadSharedState({ id: participant.id, name: participant.name, userId: currentUserId, avatar_path: participant.avatar_path ?? `${currentUserId}/avatar.jpg` }, participants);
+      } else if (!data.assignments) {
+        setData((previous) => ({ ...previous, assignments: createAssignments() }));
+      }
+      setIsRevealed(true);
+      setShowWarning(false);
+    } catch (error) {
+      setConnectionError(error instanceof Error ? error.message : 'Não foi possível concluir o sorteio.');
+    } finally {
+      setDrawSubmitting(false);
     }
-    setShowWarning(false);
-    setIsRevealed(true);
   }
 
   async function savePhoto(event: ChangeEvent<HTMLInputElement>) {
@@ -273,6 +404,18 @@ function App() {
     }
     try {
       const photo = await compressImage(file);
+      if (hasSupabaseConfig) {
+        if (!currentUserId) throw new Error('Entre novamente para enviar sua foto.');
+        const imageBlob = await (await fetch(photo)).blob();
+        const signedUrl = await uploadAvatar(currentUserId, imageBlob);
+        setData((previous) => ({ ...previous, photos: { ...previous.photos, [currentName]: signedUrl } }));
+        setParticipants((previous) => previous.map((participant) => participant.id === currentParticipantId
+          ? { ...participant, avatar_path: `${currentUserId}/avatar.jpg` }
+          : participant));
+        setPhotoError('');
+        event.target.value = '';
+        return;
+      }
       setData((previous) => ({ ...previous, photos: { ...previous.photos, [currentName]: photo } }));
       setPhotoError('');
     } catch {
@@ -282,7 +425,10 @@ function App() {
   }
 
   function changeParticipant() {
+    if (hasSupabaseConfig) void signOut().catch((error) => setConnectionError(error instanceof Error ? error.message : 'Não foi possível sair da conta.'));
     setCurrentName(null);
+    setCurrentParticipantId(null);
+    setCurrentUserId(null);
     setIsRevealed(false);
     setShowWarning(false);
     setShowWishlist(false);
@@ -319,7 +465,7 @@ function App() {
                     <span className="section-kicker">PRIMEIRO, QUEM É VOCÊ?</span>
                     <h2>Escolha seu nome.</h2>
                   </div>
-                  <div className="participant-count"><Users size={17} /><strong>20</strong><span>na roda</span></div>
+                  <div className="participant-count"><Users size={17} /><strong>{participantNames.length}</strong><span>na roda</span></div>
                 </div>
                 <label className="search-box">
                   <span className="search-glyph">⌕</span>
@@ -328,7 +474,7 @@ function App() {
                 </label>
                 <div className="people-grid">
                   {visibleParticipants.map((name, index) => (
-                    <button className={`person-option color-${index % 6}`} key={name} onClick={() => chooseParticipant(name)}>
+                    <button className={`person-option color-${index % 6}`} key={name} style={{ animationDelay: `${Math.min(index * 24, 320)}ms` }} onClick={() => chooseParticipant(name)} disabled={hasSupabaseConfig && !remoteReady}>
                       <span className="avatar avatar-small">{initials(name)}</span>
                       <span className="person-name">{name}</span>
                       <ArrowRight className="person-arrow" size={16} />
@@ -336,7 +482,8 @@ function App() {
                   ))}
                   {visibleParticipants.length === 0 && <p className="empty-search">Nenhum nome encontrado.</p>}
                 </div>
-                <p className="privacy-note"><LockKeyhole size={14} /> Seus desejos e sua foto ficam salvos neste navegador.</p>
+                <p className="privacy-note"><LockKeyhole size={14} /> {hasSupabaseConfig ? 'Seus dados ficam no espaço da família.' : 'Seus desejos e sua foto ficam salvos neste navegador.'}</p>
+                {connectionError && <p className="connection-error" role="status">{connectionError}</p>}
               </div>
               <aside className="family-aside">
                 <span className="section-kicker">SEM COMPLICAÇÃO</span>
@@ -409,6 +556,7 @@ function App() {
                   )}
                 </section>
               </div>
+              {connectionError && <p className="connection-error" role="status">{connectionError}</p>}
               <div className="dashboard-footer"><span><LockKeyhole size={13} /> A surpresa é sua. Revele em um lugar reservado.</span><span>COM CARINHO, FAMÍLIA <Heart size={12} fill="currentColor" /></span></div>
             </div>
           )}
@@ -468,7 +616,9 @@ function App() {
               </button>
             </form>
             {!hasPassword && <p className="auth-note">O primeiro acesso cria a senha deste nome. Combine o cadastro com a pessoa antes de continuar.</p>}
-            <p className="auth-note">Nesta versão, a senha e os dados ficam neste navegador. Para usar em vários celulares, será preciso conectar o Supabase.</p>
+            {hasSupabaseConfig
+              ? <p className="auth-note">Sua senha fica protegida pelo Supabase. Como o cadastro não usa e-mail real, peça ao organizador para redefinir uma senha esquecida.</p>
+              : <p className="auth-note">Nesta versão, a senha e os dados ficam neste navegador. Para usar em vários celulares, será preciso conectar o Supabase.</p>}
           </section>
         </div>
       )}
@@ -481,7 +631,7 @@ function App() {
             <span className="section-kicker">UM SEGREDO SÓ SEU</span>
             <h2 id="warning-title">Tem alguém olhando<br />por cima do seu ombro?</h2>
             <p>Seu sorteado vai aparecer na tela. Confira se está em um lugar reservado antes de continuar.</p>
-            <button className="confirm-reveal" onClick={confirmReveal}><Check size={17} /> Estou em um lugar reservado</button>
+            <button className="confirm-reveal" onClick={confirmReveal} disabled={drawSubmitting}>{drawSubmitting ? 'Preparando o sorteio...' : <><Check size={17} /> Estou em um lugar reservado</>}</button>
             <button className="later-button" onClick={() => setShowWarning(false)}>Agora não, volto depois</button>
           </section>
         </div>
