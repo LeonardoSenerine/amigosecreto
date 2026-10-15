@@ -176,6 +176,11 @@ function compressImage(file: File): Promise<string> {
 }
 
 function NotFoundPage() {
+  useEffect(() => {
+    document.title = 'Página não encontrada | Amigo secreto da família';
+    return () => { document.title = 'Amigo secreto da família'; };
+  }, []);
+
   return (
     <main className="not-found-page">
       <div className="not-found-photo">
